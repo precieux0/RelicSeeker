@@ -1,0 +1,58 @@
+#include "shader.h"
+#include "utils.h"
+
+static const char* defaultVertex = 
+    "#version 300 es\n"
+    "uniform mat4 uMVP;\n"
+    "layout(location=0) in vec3 aPos;\n"
+    "layout(location=1) in vec3 aNormal;\n"
+    "out vec3 vNormal;\n"
+    "void main() {\n"
+    "  gl_Position = uMVP * vec4(aPos, 1.0);\n"
+    "  vNormal = aNormal;\n"
+    "}\n";
+
+static const char* defaultFragment = 
+    "#version 300 es\n"
+    "precision mediump float;\n"
+    "uniform vec3 uLightDir;\n"
+    "uniform vec3 uColor;\n"
+    "in vec3 vNormal;\n"
+    "out vec4 fragColor;\n"
+    "void main() {\n"
+    "  float diff = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);\n"
+    "  fragColor = vec4(uColor * diff, 1.0);\n"
+    "}\n";
+
+Shader::Shader() : mProgram(0) {}
+Shader::~Shader() { if (mProgram) glDeleteProgram(mProgram); }
+
+bool Shader::load(const char* vs, const char* fs) {
+    if (!vs) vs = defaultVertex;
+    if (!fs) fs = defaultFragment;
+    GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex, 1, &vs, nullptr);
+    glCompileShader(vertex);
+    GLint success;
+    glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
+    if (!success) { char log[512]; glGetShaderInfoLog(vertex, 512, nullptr, log); LOGE("Vertex shader error: %s", log); return false; }
+    GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment, 1, &fs, nullptr);
+    glCompileShader(fragment);
+    glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
+    if (!success) { char log[512]; glGetShaderInfoLog(fragment, 512, nullptr, log); LOGE("Fragment shader error: %s", log); return false; }
+    mProgram = glCreateProgram();
+    glAttachShader(mProgram, vertex);
+    glAttachShader(mProgram, fragment);
+    glLinkProgram(mProgram);
+    glGetProgramiv(mProgram, GL_LINK_STATUS, &success);
+    if (!success) { char log[512]; glGetProgramInfoLog(mProgram, 512, nullptr, log); LOGE("Link error: %s", log); return false; }
+    glDeleteShader(vertex);
+    glDeleteShader(fragment);
+    return true;
+}
+
+void Shader::use() { glUseProgram(mProgram); }
+GLuint Shader::getProgram() const { return mProgram; }
+GLint Shader::getUniformLocation(const char* name) { return glGetUniformLocation(mProgram, name); }
+GLint Shader::getAttribLocation(const char* name) { return glGetAttribLocation(mProgram, name); }

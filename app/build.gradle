@@ -1,0 +1,24 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.relicseeker.game'
+    compileSdk 33
+    defaultConfig {
+        applicationId "com.relicseeker.game"
+        minSdk 33
+        targetSdk 33
+        externalNativeBuild {
+            cmake { cppFlags "-std=c++17 -fexceptions -frtti" }
+        }
+    }
+    externalNativeBuild {
+        cmake { path "src/main/cpp/CMakeLists.txt" }
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+}
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
