@@ -19,7 +19,10 @@ void Renderer::init(ANativeWindow* window) {
     glEnable(GL_CULL_FACE);
     mShader.load(nullptr, nullptr);
     mShader.use();
-    LOGI("Renderer initialized");
+    // Récupérer les dimensions de la fenêtre
+    mWidth = ANativeWindow_getWidth(window);
+    mHeight = ANativeWindow_getHeight(window);
+    LOGI("Renderer initialized, size %dx%d", mWidth, mHeight);
 }
 
 void Renderer::shutdown() {
@@ -30,18 +33,25 @@ void Renderer::shutdown() {
 
 void Renderer::beginFrame() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // Récupérer les matrices depuis la caméra
-    mView = Camera::getViewMatrix(); // à implémenter
-    // Pour l'exemple, on suppose que la caméra expose view/proj
+    // Les matrices sont obtenues depuis la caméra courante
+    mView = mCurrentCam.getViewMatrix();
+    mProj = mCurrentCam.getProjectionMatrix((float)mWidth / (float)mHeight);
 }
 
-void Renderer::endFrame() { eglSwapBuffers(mDisplay, mSurface); }
+void Renderer::endFrame() {
+    eglSwapBuffers(mDisplay, mSurface);
+}
+
+void Renderer::setCamera(const Camera& cam) {
+    mCurrentCam = cam;
+}
 
 void Renderer::drawMesh(Mesh* mesh, const mat4& model, const vec3& color) {
     mat4 mvp = mProj * mView * model;
     glUniformMatrix4fv(mShader.getUniformLocation("uMVP"), 1, GL_FALSE, mvp.m);
     glUniform3f(mShader.getUniformLocation("uColor"), color.x, color.y, color.z);
-    vec3 lightDir(1,1,0); lightDir = lightDir.normalized();
+    vec3 lightDir(1,1,0);
+    lightDir = lightDir.normalized();
     glUniform3f(mShader.getUniformLocation("uLightDir"), lightDir.x, lightDir.y, lightDir.z);
-    mesh->draw(); // on implémente draw dans Mesh utilisant le VAO
+    mesh->draw();
 }
