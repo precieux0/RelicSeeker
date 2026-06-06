@@ -12,9 +12,9 @@ class Game {
 public:
     Game(android_app* app);
     void run();
+    bool mRunning; // public pour que handleAppCmd puisse y accéder
 private:
     android_app* mApp;
-    bool mRunning;
     GameState mState;
     float mStateTimer;
     void handleEvents();

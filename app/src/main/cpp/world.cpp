@@ -2,6 +2,7 @@
 #include "input.h"
 #include "story.h"
 #include "sound.h"
+#include "renderer.h"
 #include <algorithm>
 
 World& World::get() { static World w; return w; }
@@ -27,8 +28,8 @@ void World::loadLevel(int lvl) {
         mKeysPos.push_back(vec3(-5,0.5f, -2));
         Story::get().trigger("deeper");
     } else {
+        mEnemies.emplace_back(vec3(0,0,0));
         Story::get().trigger("final_boss");
-        mEnemies.emplace_back(vec3(0,0,0)); // boss
     }
 }
 
@@ -38,16 +39,14 @@ void World::update(float dt) {
     mPlayer.update(dt, inp.isLeft(), inp.isRight(), inp.isForward(), inp.isBack(), inp.isJump());
     for (auto& e : mEnemies) e.update(dt, mPlayer.getPosition());
     checkCollisions();
-    // Vérifier ramassage clé
     for (auto it = mKeysPos.begin(); it != mKeysPos.end(); ) {
         if ((*it - mPlayer.getPosition()).length() < 1.0f) {
             mPlayer.addKey();
-            Sound::get().playPickup();
+            Sound::get().play("pickup");
             it = mKeysPos.erase(it);
             Story::get().trigger("key_found");
         } else ++it;
     }
-    // Transition niveau si toutes clés collectées et ennemis morts
     if (mKeysPos.empty() && std::all_of(mEnemies.begin(), mEnemies.end(), [](Enemy& e){ return !e.isAlive(); })) {
         mLevelTimer += dt;
         if (mLevelTimer > 2.0f) {
@@ -64,12 +63,12 @@ void World::checkCollisions() {
     for (auto& e : mEnemies) {
         if (e.isAlive() && (e.getPosition() - mPlayer.getPosition()).length() < 1.2f) {
             mPlayer.takeDamage(20);
-            Sound::get().playHit();
-            e.kill(); // l'ennemi meurt après avoir touché (simplifié)
+            Sound::get().play("hit");
+            e.kill();
         }
     }
 }
 
-void World::render(Renderer& r) { /* appelle render sur les entités */ }
+void World::render(Renderer& r) { /* à implémenter */ }
 bool World::isGameOver() const { return mGameOver; }
 int World::getCurrentLevel() const { return mLevel; }

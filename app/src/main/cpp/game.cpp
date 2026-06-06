@@ -14,30 +14,35 @@ static SplashScreen splash;
 static CreditsScreen credits;
 static bool initOnce = false;
 
+// Fonction statique pour le callback
+static void handleAppCmd(android_app* app, int32_t cmd) {
+    Game* game = (Game*)app->userData;
+    if (!game) return;
+    if (cmd == APP_CMD_INIT_WINDOW) {
+        renderer.init(app->window);
+        Input::get().init(app);
+        Font::get().init();
+        Sound::get().init(app->activity->assetManager);
+        Sound::get().loadSound("jump", "sounds/jump.wav");
+        Sound::get().loadSound("pickup", "sounds/pickup.wav");
+        Sound::get().loadSound("hit", "sounds/hit.wav");
+        Sound::get().loadSound("credits_music", "sounds/credits_music.wav");
+        splash.init();
+        credits.init();
+        World::get().init();
+        initOnce = true;
+    }
+    if (cmd == APP_CMD_TERM_WINDOW) {
+        renderer.shutdown();
+        Sound::get().shutdown();
+        Font::get().shutdown();
+        game->mRunning = false;
+    }
+}
+
 Game::Game(android_app* app) : mApp(app), mRunning(true), mState(STATE_SPLASH), mStateTimer(0) {
     mApp->userData = this;
-    mApp->onAppCmd = [this](android_app* app, int32_t cmd) {
-        if (cmd == APP_CMD_INIT_WINDOW) {
-            renderer.init(app->window);
-            Input::get().init(app);
-            Font::get().init();
-            Sound::get().init(app->activity->assetManager);
-            Sound::get().loadSound("jump", "sounds/jump.wav");
-            Sound::get().loadSound("pickup", "sounds/pickup.wav");
-            Sound::get().loadSound("hit", "sounds/hit.wav");
-            Sound::get().loadSound("credits_music", "sounds/credits_music.wav");
-            splash.init();
-            credits.init();
-            World::get().init();
-            initOnce = true;
-        }
-        if (cmd == APP_CMD_TERM_WINDOW) {
-            renderer.shutdown();
-            Sound::get().shutdown();
-            Font::get().shutdown();
-            mRunning = false;
-        }
-    };
+    mApp->onAppCmd = handleAppCmd;
 }
 
 void Game::changeState(GameState newState) {
