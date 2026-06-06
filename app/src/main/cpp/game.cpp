@@ -16,7 +16,7 @@ static bool initOnce = false;
 
 Game::Game(android_app* app) : mApp(app), mRunning(true), mState(STATE_SPLASH), mStateTimer(0) {
     mApp->userData = this;
-    mApp->onAppCmd = [](android_app* app, int32_t cmd) {
+    mApp->onAppCmd = [this](android_app* app, int32_t cmd) {
         if (cmd == APP_CMD_INIT_WINDOW) {
             renderer.init(app->window);
             Input::get().init(app);
@@ -25,6 +25,7 @@ Game::Game(android_app* app) : mApp(app), mRunning(true), mState(STATE_SPLASH), 
             Sound::get().loadSound("jump", "sounds/jump.wav");
             Sound::get().loadSound("pickup", "sounds/pickup.wav");
             Sound::get().loadSound("hit", "sounds/hit.wav");
+            Sound::get().loadSound("credits_music", "sounds/credits_music.wav");
             splash.init();
             credits.init();
             World::get().init();
@@ -43,7 +44,7 @@ void Game::changeState(GameState newState) {
     mState = newState;
     mStateTimer = 0;
     if (newState == STATE_SPLASH) {
-        splash.init(); // reset
+        splash.init();
     } else if (newState == STATE_PLAYING) {
         World::get().init();
     } else if (newState == STATE_CREDITS) {
@@ -76,24 +77,17 @@ void Game::update(float dt) {
     switch (mState) {
         case STATE_SPLASH:
             splash.update(dt);
-            if (splash.isFinished()) {
-                changeState(STATE_PLAYING);
-            }
+            if (splash.isFinished()) changeState(STATE_PLAYING);
             break;
         case STATE_PLAYING:
             World::get().update(dt);
             Story::get().update(dt);
-            if (World::get().isGameOver()) {
-                changeState(STATE_CREDITS);
-            } else if (World::get().getCurrentLevel() > 3) {
-                changeState(STATE_CREDITS);
-            }
+            if (World::get().isGameOver()) changeState(STATE_CREDITS);
+            else if (World::get().getCurrentLevel() > 3) changeState(STATE_CREDITS);
             break;
         case STATE_CREDITS:
             credits.update(dt);
-            if (credits.isFinished() || Input::get().isAction()) {
-                mRunning = false; // quitte le jeu
-            }
+            if (credits.isFinished() || Input::get().isAction()) mRunning = false;
             break;
         default: break;
     }
