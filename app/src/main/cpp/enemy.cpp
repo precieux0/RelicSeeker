@@ -17,6 +17,15 @@ void Enemy::update(float dt, const vec3& player) {
     mAngle += dt * (mType == ENEMY_SPIDER ? 5.0f : 2.5f);
 }
 
+void Enemy::render(Renderer& r) {
+    // Le rendu est géré par World::render()
+}
+
+vec3 Enemy::getPosition() const { return mPos; }
+bool Enemy::isAlive() const { return mAlive; }
+void Enemy::kill() { mAlive = false; }
+int Enemy::getType() const { return mType; }
+
 vec3 Enemy::getColor() const {
     switch (mType) {
         case ENEMY_SPIDER: return vec3(0.15f, 0.12f, 0.10f);
