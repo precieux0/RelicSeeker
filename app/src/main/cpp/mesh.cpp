@@ -101,6 +101,45 @@ void Mesh::createPyramid() {
     upload();
 }
 
+void Mesh::createCylinder(int segments) {
+    if (segments < 8) segments = 8;
+    mVertices.clear();
+    mIndices.clear();
+
+    for (int i = 0; i < segments; ++i) {
+        float a0 = (float)i / segments * 6.28318f;
+        float a1 = (float)(i + 1) / segments * 6.28318f;
+        float x0 = cosf(a0) * 0.5f, z0 = sinf(a0) * 0.5f;
+        float x1 = cosf(a1) * 0.5f, z1 = sinf(a1) * 0.5f;
+        vec3 n0(x0, 0, z0);
+        vec3 n1(x1, 0, z1);
+
+        mVertices.push_back({ vec3(x0, -0.5f, z0), n0 });
+        mVertices.push_back({ vec3(x1, -0.5f, z1), n1 });
+        mVertices.push_back({ vec3(x1,  0.5f, z1), n1 });
+        mVertices.push_back({ vec3(x0, -0.5f, z0), n0 });
+        mVertices.push_back({ vec3(x1,  0.5f, z1), n1 });
+        mVertices.push_back({ vec3(x0,  0.5f, z0), n0 });
+
+        int base = (int)mVertices.size() - 6;
+        for (int j = 0; j < 6; ++j) mIndices.push_back((GLushort)(base + j));
+    }
+    mIndexCount = (GLsizei)mIndices.size();
+    upload();
+}
+
+void Mesh::createPlane() {
+    mVertices = {
+        { vec3(-0.5f, 0, -0.5f), vec3(0, 1, 0) },
+        { vec3( 0.5f, 0, -0.5f), vec3(0, 1, 0) },
+        { vec3( 0.5f, 0,  0.5f), vec3(0, 1, 0) },
+        { vec3(-0.5f, 0,  0.5f), vec3(0, 1, 0) },
+    };
+    mIndices = { 0, 1, 2, 0, 2, 3 };
+    mIndexCount = 6;
+    upload();
+}
+
 void Mesh::upload() {
     if (mVertices.empty() || mIndices.empty()) return;
 

@@ -35,6 +35,9 @@ add_library(RelicSeeker SHARED
     splash.cpp
     credits.cpp
     font.cpp
+    menu.cpp
+    hud.cpp
+    level.cpp
 )
 
 target_link_libraries(RelicSeeker
@@ -46,3 +49,6 @@ target_link_libraries(RelicSeeker
     OpenSLES
     z
 )
+
+# Garantit que le point d'entrée NativeActivity reste visible pour le linker LLD.
+target_link_options(RelicSeeker PRIVATE "-u" "ANativeActivity_onCreate")

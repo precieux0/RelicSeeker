@@ -16,9 +16,10 @@ public:
     bool play(const std::string& soundName);
     bool playMusic(const std::string& soundName, bool loop = false);
     bool stopMusic(const std::string& soundName);
+    void stopCurrentMusic();
+    bool switchMusic(const std::string& name, bool loop = true);
     void unload(const std::string& soundName);
 
-    // Structure publique pour le callback
     struct SoundData {
         std::vector<short> samples;
         SLuint32 sampleRate;
@@ -36,6 +37,7 @@ private:
     std::unordered_map<std::string, SoundData> mSounds;
     AAssetManager* mAssetManager;
     bool mInitialized;
+    std::string mCurrentMusic;
     SLObjectItf mEngineObj;
     SLEngineItf mEngine;
     SLObjectItf mOutputMixObj;

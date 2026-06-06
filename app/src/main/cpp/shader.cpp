@@ -1,27 +1,47 @@
 #include "shader.h"
 #include "utils.h"
 
-static const char* defaultVertex = 
+static const char* defaultVertex =
     "#version 300 es\n"
     "uniform mat4 uMVP;\n"
+    "uniform mat4 uModel;\n"
     "layout(location=0) in vec3 aPos;\n"
     "layout(location=1) in vec3 aNormal;\n"
     "out vec3 vNormal;\n"
+    "out vec3 vWorldPos;\n"
     "void main() {\n"
+    "  vec4 world = uModel * vec4(aPos, 1.0);\n"
+    "  vWorldPos = world.xyz;\n"
+    "  vNormal = mat3(uModel) * aNormal;\n"
     "  gl_Position = uMVP * vec4(aPos, 1.0);\n"
-    "  vNormal = aNormal;\n"
     "}\n";
 
-static const char* defaultFragment = 
+static const char* defaultFragment =
     "#version 300 es\n"
     "precision mediump float;\n"
     "uniform vec3 uLightDir;\n"
     "uniform vec3 uColor;\n"
+    "uniform vec3 uCameraPos;\n"
+    "uniform vec3 uFogColor;\n"
+    "uniform float uFogDensity;\n"
+    "uniform float uEmissive;\n"
     "in vec3 vNormal;\n"
+    "in vec3 vWorldPos;\n"
     "out vec4 fragColor;\n"
     "void main() {\n"
-    "  float diff = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);\n"
-    "  fragColor = vec4(uColor * diff, 1.0);\n"
+    "  vec3 N = normalize(vNormal);\n"
+    "  vec3 L = normalize(uLightDir);\n"
+    "  float diff = max(dot(N, L), 0.0);\n"
+    "  float ambient = 0.22;\n"
+    "  vec3 V = normalize(uCameraPos - vWorldPos);\n"
+    "  vec3 H = normalize(L + V);\n"
+    "  float spec = pow(max(dot(N, H), 0.0), 24.0) * 0.35;\n"
+    "  vec3 lit = uColor * (ambient + diff * 0.78) + vec3(spec);\n"
+    "  lit += uColor * uEmissive;\n"
+    "  float dist = length(uCameraPos - vWorldPos);\n"
+    "  float fog = 1.0 - exp(-uFogDensity * dist);\n"
+    "  fog = clamp(fog, 0.0, 0.92);\n"
+    "  fragColor = vec4(mix(lit, uFogColor, fog), 1.0);\n"
     "}\n";
 
 Shader::Shader() : mProgram(0) {}

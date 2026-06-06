@@ -10,12 +10,17 @@ android {
 
     defaultConfig {
         applicationId "com.relicseeker.game"
-        minSdk 33
+        minSdk 24
         targetSdk 33
         externalNativeBuild {
             cmake {
                 cppFlags "-std=c++17 -fexceptions -frtti"
+                // c++_static évite le crash au lancement (libc++_shared.so manquant dans l'APK)
+                arguments "-DANDROID_STL=c++_static"
             }
+        }
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
     }
 
@@ -27,7 +32,6 @@ android {
 
     signingConfigs {
         release {
-            // Lire les propriétés depuis keystore.properties (fichier local non versionné)
             def keystorePropertiesFile = rootProject.file("app/keystore.properties")
             if (keystorePropertiesFile.exists()) {
                 def keystoreProperties = new Properties()
@@ -37,7 +41,6 @@ android {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
             } else {
-                // En CI, on utilise les variables d'environnement
                 storeFile file(System.getenv("KEYSTORE_PATH") ?: "relic.keystore")
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS")
@@ -50,7 +53,17 @@ android {
         release {
             signingConfig signingConfigs.release
             minifyEnabled false
+            debuggable false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
         }
     }
 
@@ -61,5 +74,4 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
 }

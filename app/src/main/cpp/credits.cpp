@@ -66,7 +66,7 @@ void CreditsScreen::init() {
     mScrollY = 1.2f;
     mFinished = false;
     mFadeAlpha = 0;
-    Sound::get().playMusic("credits_music", true);
+    // Musique geree par Game::changeState
 }
 
 void CreditsScreen::drawBackground() {
@@ -101,7 +101,7 @@ void CreditsScreen::update(float dt) {
         mFadeAlpha += dt*0.5f;
         if (mFadeAlpha >= 1.0f) {
             mFinished = true;
-            Sound::get().stopMusic("credits_music");
+            Sound::get().stopCurrentMusic();
         }
     }
 }
@@ -132,5 +132,5 @@ void CreditsScreen::shutdown() {
     if (mVBO) glDeleteBuffers(1, &mVBO);
     if (mVAO) glDeleteVertexArrays(1, &mVAO);
     mBackgroundTexture = mVBO = mVAO = 0;
-    Sound::get().stopMusic("credits_music");
+    Sound::get().stopCurrentMusic();
 }

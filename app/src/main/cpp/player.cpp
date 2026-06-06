@@ -1,13 +1,23 @@
 #include "player.h"
 #include "renderer.h"
 #include "mesh.h"
+#include "sound.h"
 #include "utils.h"
 
 static const float SPEED = 4.0f;
 static const float GRAVITY = -12.0f;
 static const float JUMP_POWER = 7.0f;
 
-Player::Player() : mPos(0,1,0), mVel(0,0,0), mGrounded(true), mHealth(100), mKeys(0), mAnimTime(0) {}
+Player::Player() : mPos(0,1,0), mVel(0,0,0), mGrounded(true), mHealth(100), mMaxHealth(100), mKeys(0), mAnimTime(0) {}
+
+void Player::reset(const vec3& startPos) {
+    mPos = startPos;
+    mVel = vec3(0, 0, 0);
+    mGrounded = true;
+    mHealth = mMaxHealth;
+    mKeys = 0;
+    mAnimTime = 0;
+}
 
 void Player::update(float dt, bool left, bool right, bool forward, bool back, bool jump) {
     mAnimTime += dt;
@@ -27,7 +37,10 @@ void Player::update(float dt, bool left, bool right, bool forward, bool back, bo
     if (mGrounded && mPos.y < 0.5f) {
         mPos.y = 0.5f;
         mVel.y = 0;
-        if (jump) mVel.y = JUMP_POWER;
+        if (jump) {
+            mVel.y = JUMP_POWER;
+            Sound::get().play("jump");
+        }
     }
     // Collision avec les limites
     mPos.x = fmaxf(-12.0f, fminf(12.0f, mPos.x));
@@ -40,6 +53,8 @@ void Player::render(Renderer& r) {
 
 vec3 Player::getPosition() const { return mPos; }
 int Player::getHealth() const { return mHealth; }
+int Player::getMaxHealth() const { return mMaxHealth; }
 void Player::takeDamage(int dmg) { mHealth = fmaxf(0, mHealth - dmg); }
 void Player::addKey() { mKeys++; }
+int Player::getKeys() const { return mKeys; }
 bool Player::hasKey() const { return mKeys > 0; }

@@ -5,6 +5,7 @@
 #include "shader.h"
 #include "mesh.h"
 #include "camera.h"
+#include "utils.h"
 
 class Renderer {
 public:
@@ -14,7 +15,11 @@ public:
     void beginFrame();
     void endFrame();
     void setCamera(const Camera& cam);
-    void drawMesh(Mesh* mesh, const mat4& model, const vec3& color);
+    void setEnvironment(const vec3& skyColor, const vec3& fogColor, float fogDensity, const vec3& lightDir);
+    void drawMesh(Mesh* mesh, const mat4& model, const vec3& color, float emissive = 0.0f);
+    void drawSky();
+    int getWidth() const { return mWidth; }
+    int getHeight() const { return mHeight; }
 private:
     EGLDisplay mDisplay;
     EGLSurface mSurface;
@@ -22,6 +27,8 @@ private:
     Shader mShader;
     Camera mCurrentCam;
     mat4 mView, mProj;
+    vec3 mSkyColor, mFogColor, mLightDir;
+    float mFogDensity;
     int mWidth, mHeight;
     bool mInitialized;
 };

@@ -10,7 +10,9 @@ Sound& Sound::get() {
 }
 
 Sound::Sound() : mAssetManager(nullptr), mInitialized(false),
-                 mEngineObj(nullptr), mEngine(nullptr), mOutputMixObj(nullptr) {}
+                 mEngineObj(nullptr), mEngine(nullptr), mOutputMixObj(nullptr) {
+    mSounds.clear();
+}
 Sound::~Sound() { shutdown(); }
 
 bool Sound::init(AAssetManager* assetManager) {
@@ -80,7 +82,10 @@ bool Sound::loadSound(const std::string& name, const std::string& filename) {
     if (!mInitialized) return false;
     if (mSounds.find(name) != mSounds.end()) return true;
     SoundData data;
-    if (!decodeWAV(filename, data.samples, data.sampleRate, data.channels)) return false;
+    if (!decodeWAV(filename, data.samples, data.sampleRate, data.channels)) {
+        LOGI("Sound optional load failed: %s (%s)", name.c_str(), filename.c_str());
+        return false;
+    }
     SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE,1};
     SLDataFormat_PCM format_pcm = {SL_DATAFORMAT_PCM, data.channels, data.sampleRate*1000,
         SL_PCMSAMPLEFORMAT_FIXED_16, SL_PCMSAMPLEFORMAT_FIXED_16,
@@ -101,6 +106,7 @@ bool Sound::loadSound(const std::string& name, const std::string& filename) {
     if (result != SL_RESULT_SUCCESS) { (*data.playerObj)->Destroy(data.playerObj); return false; }
     result = (*data.bufferQueue)->Enqueue(data.bufferQueue, data.samples.data(), data.samples.size()*sizeof(short));
     if (result != SL_RESULT_SUCCESS) { (*data.playerObj)->Destroy(data.playerObj); return false; }
+    data.isPlaying = false;
     mSounds[name] = std::move(data);
     LOGI("Loaded sound %s", name.c_str());
     return true;
@@ -143,9 +149,28 @@ bool Sound::stopMusic(const std::string& name) {
     auto it = mSounds.find(name);
     if (it == mSounds.end()) return false;
     SoundData& d = it->second;
+    (*d.bufferQueue)->RegisterCallback(d.bufferQueue, nullptr, nullptr);
     (*d.playerPlay)->SetPlayState(d.playerPlay, SL_PLAYSTATE_STOPPED);
     (*d.bufferQueue)->Clear(d.bufferQueue);
     d.isPlaying = false;
+    if (mCurrentMusic == name) mCurrentMusic.clear();
+    return true;
+}
+
+void Sound::stopCurrentMusic() {
+    if (!mCurrentMusic.empty()) stopMusic(mCurrentMusic);
+}
+
+bool Sound::switchMusic(const std::string& name, bool loop) {
+    if (name.empty()) { stopCurrentMusic(); return false; }
+    auto it = mSounds.find(name);
+    if (it != mSounds.end() && mCurrentMusic == name && it->second.isPlaying) return true;
+    stopCurrentMusic();
+    if (!playMusic(name, loop)) {
+        LOGI("Music track unavailable: %s", name.c_str());
+        return false;
+    }
+    mCurrentMusic = name;
     return true;
 }
 

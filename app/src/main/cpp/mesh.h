@@ -15,7 +15,9 @@ public:
 
     void createCube();
     void createPyramid();
-    void draw() const;  // dessine avec le shader déjà actif
+    void createCylinder(int segments = 16);
+    void createPlane();
+    void draw() const;
 
 private:
     GLuint mVAO, mVBO, mEBO;

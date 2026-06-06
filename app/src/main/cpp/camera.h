@@ -4,7 +4,7 @@
 class Camera {
 public:
     Camera();
-    void update(float dt, const vec3& target);
+    void update(float dt, const vec3& target, float lookX, float lookY);
     void setTarget(const vec3& target);
     mat4 getViewMatrix() const;
     mat4 getProjectionMatrix(float aspect) const;

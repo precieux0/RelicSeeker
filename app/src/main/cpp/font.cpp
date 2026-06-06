@@ -101,8 +101,11 @@ static const unsigned char fontData[96][8] = {
     {0x00,0x00,0x00,0x76,0xDC,0x00,0x00,0x00}  // ~
 };
 
-Font::Font() : mTexture(0), mShaderProg(0), mMVPLoc(-1), mColorLoc(-1), mTexLoc(-1),
-               mVBO(0), mVAO(0), mCharWidth(8), mCharHeight(8) {}
+Font::Font() : mTexture(0), mShaderProg(0), mRectProg(0),
+               mMVPLoc(-1), mColorLoc(-1), mTexLoc(-1),
+               mRectMVPLoc(-1), mRectColorLoc(-1),
+               mVBO(0), mVAO(0), mRectVAO(0), mRectVBO(0),
+               mCharWidth(8), mCharHeight(8) {}
 
 Font& Font::get() { static Font f; return f; }
 
@@ -140,7 +143,7 @@ bool Font::init() {
         "uniform vec4 uColor;\n"
         "out vec4 fragColor;\n"
         "void main() {\n"
-        "    float alpha = texture(uTex, vTexCoord).a;\n"
+        "    float alpha = texture(uTex, vTexCoord).r;\n"
         "    fragColor = vec4(uColor.rgb, uColor.a * alpha);\n"
         "}\n";
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -179,13 +182,48 @@ bool Font::init() {
             }
         }
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 8, 768, 0, GL_ALPHA, GL_UNSIGNED_BYTE, texData);
+    // GL_ALPHA n'existe pas en GLES 3 — utiliser GL_R8 / GL_RED.
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 8, 768, 0, GL_RED, GL_UNSIGNED_BYTE, texData);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     setupBuffers();
-    LOGI("Font initialisée avec shader");
+
+    const char* rvs =
+        "#version 300 es\n"
+        "layout(location=0) in vec2 aPos;\n"
+        "uniform mat4 uMVP;\n"
+        "void main(){ gl_Position=uMVP*vec4(aPos,0,1); }";
+    const char* rfs =
+        "#version 300 es\n"
+        "precision mediump float;\n"
+        "uniform vec4 uColor;\n"
+        "out vec4 fragColor;\n"
+        "void main(){ fragColor=uColor; }";
+    GLuint rv = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(rv, 1, &rvs, nullptr);
+    glCompileShader(rv);
+    GLuint rf = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(rf, 1, &rfs, nullptr);
+    glCompileShader(rf);
+    mRectProg = glCreateProgram();
+    glAttachShader(mRectProg, rv);
+    glAttachShader(mRectProg, rf);
+    glLinkProgram(mRectProg);
+    glDeleteShader(rv);
+    glDeleteShader(rf);
+    mRectMVPLoc = glGetUniformLocation(mRectProg, "uMVP");
+    mRectColorLoc = glGetUniformLocation(mRectProg, "uColor");
+    glGenVertexArrays(1, &mRectVAO);
+    glGenBuffers(1, &mRectVBO);
+    glBindVertexArray(mRectVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, mRectVBO);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+
+    LOGI("Font initialisee");
     return true;
 }
 
@@ -236,10 +274,34 @@ void Font::drawText(const std::string& text, float x, float y, float scale, floa
     glBindVertexArray(0);
 }
 
+void Font::drawRect(float x, float y, float w, float h, float r, float g, float b, float alpha) {
+    if (!mRectProg) return;
+    float verts[] = { x, y, x + w, y, x + w, y + h, x, y + h };
+    float ortho[16] = {
+        1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1
+    };
+    glUseProgram(mRectProg);
+    glUniformMatrix4fv(mRectMVPLoc, 1, GL_FALSE, ortho);
+    glUniform4f(mRectColorLoc, r, g, b, alpha);
+    glBindVertexArray(mRectVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, mRectVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBindVertexArray(0);
+}
+
 void Font::shutdown() {
     if (mShaderProg) glDeleteProgram(mShaderProg);
+    if (mRectProg) glDeleteProgram(mRectProg);
     if (mTexture) glDeleteTextures(1, &mTexture);
     if (mVBO) glDeleteBuffers(1, &mVBO);
     if (mVAO) glDeleteVertexArrays(1, &mVAO);
-    mShaderProg = mTexture = mVBO = mVAO = 0;
+    if (mRectVBO) glDeleteBuffers(1, &mRectVBO);
+    if (mRectVAO) glDeleteVertexArrays(1, &mRectVAO);
+    mShaderProg = mRectProg = mTexture = mVBO = mVAO = mRectVBO = mRectVAO = 0;
 }

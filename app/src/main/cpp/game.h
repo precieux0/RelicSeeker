@@ -3,7 +3,9 @@
 
 enum GameState {
     STATE_SPLASH,
+    STATE_MENU,
     STATE_PLAYING,
+    STATE_PAUSED,
     STATE_CREDITS,
     STATE_GAMEOVER
 };
@@ -13,16 +15,15 @@ public:
     Game(android_app* app);
     void run();
 
-    // Accessibles depuis handleAppCmd
     bool mRunning;
-    bool mWindowReady;   // EGL + GL prêts ?
-    bool mHasFocus;      // l'app est-elle au premier plan ?
+    bool mWindowReady;
+    bool mHasFocus;
 
 private:
     android_app* mApp;
     GameState mState;
     float mStateTimer;
-    void handleEvents();
+    int handleEvents();
     void update(float dt);
     void render();
     void changeState(GameState newState);
