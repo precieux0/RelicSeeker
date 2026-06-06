@@ -19,7 +19,6 @@ void Renderer::init(ANativeWindow* window) {
     glEnable(GL_CULL_FACE);
     mShader.load(nullptr, nullptr);
     mShader.use();
-    // Récupérer les dimensions de la fenêtre
     mWidth = ANativeWindow_getWidth(window);
     mHeight = ANativeWindow_getHeight(window);
     LOGI("Renderer initialized, size %dx%d", mWidth, mHeight);
@@ -33,7 +32,6 @@ void Renderer::shutdown() {
 
 void Renderer::beginFrame() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // Les matrices sont obtenues depuis la caméra courante
     mView = mCurrentCam.getViewMatrix();
     mProj = mCurrentCam.getProjectionMatrix((float)mWidth / (float)mHeight);
 }

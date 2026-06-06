@@ -4,6 +4,14 @@ project(RelicSeeker)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
 
+# Définir le chemin du NDK (utilisé par GitHub Actions)
+if(NOT DEFINED ANDROID_NDK)
+    set(ANDROID_NDK "/usr/local/lib/android/sdk/ndk/25.2.9519653")
+endif()
+
+# Ajouter le dossier contenant native_app_glue.h
+include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
+
 add_library(RelicSeeker SHARED
     main.cpp
     game.cpp
@@ -22,8 +30,7 @@ add_library(RelicSeeker SHARED
     splash.cpp
     credits.cpp
     font.cpp
-    # Chemin absolu vers native_app_glue (valable sur GitHub Actions)
-    /usr/local/lib/android/sdk/ndk/25.2.9519653/sources/android/native_app_glue/android_native_app_glue.c
+    ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c
 )
 
 target_link_libraries(RelicSeeker
