@@ -6,6 +6,8 @@ android {
     namespace 'com.relicseeker.game'
     compileSdk 33
 
+    ndkVersion "25.2.9519653"   // NDK supportant l'API 33
+
     defaultConfig {
         applicationId "com.relicseeker.game"
         minSdk 33
@@ -28,6 +30,11 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
