@@ -12,7 +12,12 @@ class Game {
 public:
     Game(android_app* app);
     void run();
-    bool mRunning; // public pour que handleAppCmd puisse y accéder
+
+    // Accessibles depuis handleAppCmd
+    bool mRunning;
+    bool mWindowReady;   // EGL + GL prêts ?
+    bool mHasFocus;      // l'app est-elle au premier plan ?
+
 private:
     android_app* mApp;
     GameState mState;

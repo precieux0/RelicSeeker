@@ -1,13 +1,15 @@
 #pragma once
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <android/native_window.h>
 #include "shader.h"
 #include "mesh.h"
 #include "camera.h"
 
 class Renderer {
 public:
-    void init(ANativeWindow* window);
+    Renderer();
+    bool init(ANativeWindow* window);
     void shutdown();
     void beginFrame();
     void endFrame();
@@ -21,4 +23,5 @@ private:
     Camera mCurrentCam;
     mat4 mView, mProj;
     int mWidth, mHeight;
+    bool mInitialized;
 };
