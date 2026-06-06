@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Signed APK
 on: [push]
 jobs:
   build:
@@ -8,17 +8,20 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with: { distribution: 'temurin', java-version: '17' }
-      - name: Install Gradle
+      - name: Create keystore (temporaire)
         run: |
-          wget https://services.gradle.org/distributions/gradle-8.0-bin.zip
-          unzip gradle-8.0-bin.zip
-          echo "$PWD/gradle-8.0/bin" >> $GITHUB_PATH
+          keytool -genkey -v -keystore relic.keystore -alias relic -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=OKIT, OU=ID, O=OKIT Games, L=City, S=State, C=FR"
+          echo "KEYSTORE_PATH=$PWD/relic.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=123456" >> $GITHUB_ENV
+          echo "KEY_ALIAS=relic" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=123456" >> $GITHUB_ENV
       - name: Build with Gradle
         run: |
           cd app
-          gradle assembleRelease
+          chmod +x gradlew
+          ./gradlew assembleRelease
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: relic-seeker
+          name: RelicSeeker-signed
           path: app/build/outputs/apk/release/*.apk
