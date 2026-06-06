@@ -3,8 +3,8 @@
 #include <android/native_window.h>
 
 Input& Input::get() {
-    static Input sInstance;
-    return sInstance;
+    static Input instance;
+    return instance;
 }
 
 Input::Input() : mApp(nullptr), mLeft(false), mRight(false), mForward(false),
@@ -12,7 +12,9 @@ Input::Input() : mApp(nullptr), mLeft(false), mRight(false), mForward(false),
 
 void Input::init(android_app* app) {
     mApp = app;
-    app->onInputEvent = handleInput;
+    app->onInputEvent = [](android_app* app, AInputEvent* event) -> int32_t {
+        return Input::get().handleInput(app, event);
+    };
 }
 
 void Input::update() {}
@@ -27,24 +29,25 @@ float Input::getLookX() const { return mTouchX; }
 float Input::getLookY() const { return mTouchY; }
 
 int32_t Input::handleInput(android_app* app, AInputEvent* event) {
-    Input& self = Input::get();
-    if (!app || !app->window) return 0; // sécurité : fenêtre peut être nulle
+    if (!app || !app->window) return 0;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        int width  = ANativeWindow_getWidth(app->window);
+        int width = ANativeWindow_getWidth(app->window);
         int height = ANativeWindow_getHeight(app->window);
         if (width <= 0 || height <= 0) return 0;
         float x = AMotionEvent_getX(event, 0);
         float y = AMotionEvent_getY(event, 0);
-        if (x < width/2.0f) {
-            self.mForward = (y < height * 0.35f);
-            self.mBack    = (y > height * 0.65f);
-            self.mLeft    = (x < width/4.0f);
-            self.mRight   = (x > width/4.0f && x < width/2.0f);
+        if (x < width / 2.0f) {
+            // Moitié gauche : déplacement
+            mForward = (y < height * 0.35f);
+            mBack    = (y > height * 0.65f);
+            mLeft    = (x < width / 4.0f);
+            mRight   = (x > width / 4.0f && x < width / 2.0f);
         } else {
-            self.mJump   = (y < height * 0.5f);
-            self.mAction = (y >= height * 0.5f);
-            self.mTouchX = (x - width/2.0f) / (width/2.0f);
-            self.mTouchY = y / (float)height;
+            // Moitié droite : saut et action
+            mJump    = (y < height * 0.5f);
+            mAction  = (y >= height * 0.5f);
+            mTouchX  = (x - width / 2.0f) / (width / 2.0f);
+            mTouchY  = y / (float)height;
         }
         return 1;
     }

@@ -9,11 +9,12 @@
 #include "font.h"
 #include "utils.h"
 #include <chrono>
+#include <thread>
 
 static Renderer renderer;
 static SplashScreen splash;
 static CreditsScreen credits;
-static bool sAssetsLoaded = false; // sons + monde chargés une seule fois
+static bool sAssetsLoaded = false;
 
 static void handleAppCmd(android_app* app, int32_t cmd) {
     Game* game = (Game*)app->userData;
@@ -21,54 +22,44 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
 
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
+            LOGI("APP_CMD_INIT_WINDOW");
             if (app->window != nullptr) {
-                LOGI("APP_CMD_INIT_WINDOW : initialisation du renderer");
                 if (!renderer.init(app->window)) {
-                    LOGE("Echec init renderer, abandon de la frame");
+                    LOGE("Renderer init failed");
                     return;
                 }
-                // Ressources GL : font + splash + credits
-                Font::get().init();
-                splash.init();
-                credits.init();
-
-                // Charger sons + monde une seule fois
+                // Charger les ressources graphiques une fois
                 if (!sAssetsLoaded) {
-                    if (Sound::get().init(app->activity->assetManager)) {
-                        Sound::get().loadSound("jump", "sounds/jump.wav");
-                        Sound::get().loadSound("pickup", "sounds/pickup.wav");
-                        Sound::get().loadSound("hit", "sounds/hit.wav");
-                        Sound::get().loadSound("credits_music", "sounds/credits_music.wav");
-                    } else {
-                        LOGE("Sound init a échoué (on continue sans son)");
-                    }
+                    Font::get().init();
+                    splash.init();
+                    credits.init();
+                    sAssetsLoaded = true;
+                }
+                // Son et Input une seule fois
+                static bool soundLoaded = false;
+                if (!soundLoaded) {
+                    Sound::get().init(app->activity->assetManager);
+                    Sound::get().loadSound("jump", "sounds/jump.wav");
+                    Sound::get().loadSound("pickup", "sounds/pickup.wav");
+                    Sound::get().loadSound("hit", "sounds/hit.wav");
+                    Sound::get().loadSound("credits_music", "sounds/credits_music.wav");
                     Input::get().init(app);
                     World::get().init();
-                    sAssetsLoaded = true;
+                    soundLoaded = true;
                 }
                 game->mWindowReady = true;
             }
             break;
 
         case APP_CMD_TERM_WINDOW:
-            LOGI("APP_CMD_TERM_WINDOW : libération du renderer");
+            LOGI("APP_CMD_TERM_WINDOW");
             game->mWindowReady = false;
             renderer.shutdown();
-            // NB : on ne touche pas au son ni au monde, on ne tue pas l'app.
-            break;
-
-        case APP_CMD_GAINED_FOCUS:
-            game->mHasFocus = true;
-            break;
-        case APP_CMD_LOST_FOCUS:
-            game->mHasFocus = false;
             break;
 
         case APP_CMD_DESTROY:
+            LOGI("APP_CMD_DESTROY");
             game->mRunning = false;
-            break;
-
-        default:
             break;
     }
 }
@@ -83,49 +74,41 @@ Game::Game(android_app* app)
 void Game::changeState(GameState newState) {
     mState = newState;
     mStateTimer = 0;
-    if (newState == STATE_SPLASH) {
-        splash.init();
-    } else if (newState == STATE_PLAYING) {
+    if (newState == STATE_PLAYING) {
         World::get().init();
-    } else if (newState == STATE_CREDITS) {
-        credits.init();
     }
 }
 
 void Game::run() {
     auto lastTime = std::chrono::steady_clock::now();
     while (mRunning) {
-        handleEvents();
+        // Attendre que la fenêtre soit prête
+        while (!mWindowReady && mRunning) {
+            handleEvents();
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
         if (!mRunning) break;
 
         auto now = std::chrono::steady_clock::now();
         float dt = std::chrono::duration<float>(now - lastTime).count();
-        if (dt > 0.1f) dt = 0.1f; // clamp
+        if (dt > 0.1f) dt = 0.1f;
         lastTime = now;
 
-        // On ne rend / met à jour QUE si la fenêtre + GL sont prêts.
-        if (mWindowReady) {
-            update(dt);
-            render();
-        }
+        handleEvents();
+        update(dt);
+        render();
     }
 }
 
 void Game::handleEvents() {
     android_poll_source* source;
-    // Si la fenêtre n'est pas prête, on bloque jusqu'à un événement (économise le CPU
-    // ET surtout évite de boucler en rendant à vide -> crash GL).
-    int timeoutMs = mWindowReady ? 0 : -1;
-    int events;
-    while (ALooper_pollAll(timeoutMs, nullptr, &events, (void**)&source) >= 0) {
+    int ident;
+    while ((ident = ALooper_pollAll(0, nullptr, nullptr, (void**)&source)) >= 0) {
         if (source) source->process(mApp, source);
-        if (mApp->destroyRequested) {
-            mRunning = false;
-            return;
-        }
-        // Après le premier événement traité, on repasse en non-bloquant pour
-        // permettre la boucle de rendu de tourner.
-        timeoutMs = 0;
+    }
+    if (mApp->destroyRequested) {
+        mRunning = false;
+        return;
     }
     Input::get().update();
 }
@@ -151,6 +134,7 @@ void Game::update(float dt) {
 }
 
 void Game::render() {
+    if (!mWindowReady) return;
     renderer.beginFrame();
     switch (mState) {
         case STATE_SPLASH:
