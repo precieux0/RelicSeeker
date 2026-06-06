@@ -1,3 +1,5 @@
+#include "mesh.h"
+
 #pragma once
 #include <vector>
 #include "player.h"

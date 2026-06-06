@@ -28,15 +28,9 @@ vec3 Enemy::getColor() const {
 
 vec3 Enemy::getScale() const {
     switch (mType) {
-        case ENEMY_SPIDER: return vec3(0.9f, 0.5f, 0.9f);
-        case ENEMY_MUMMY:  return vec3(0.9f, 1.6f, 0.9f);
-        case ENEMY_BOSS:   return vec3(2.2f, 2.8f, 2.2f);
-        default:           return vec3(1.0f, 1.3f, 1.0f);
+        case ENEMY_SPIDER: return vec3(1.0f, 0.8f, 1.2f);
+        case ENEMY_MUMMY:  return vec3(0.9f, 1.1f, 0.8f);
+        case ENEMY_BOSS:   return vec3(1.3f, 1.3f, 1.3f);
+        default:           return vec3(1.0f, 1.0f, 1.0f);
     }
 }
-
-void Enemy::render(Renderer& r) { (void)r; }
-vec3 Enemy::getPosition() const { return mPos; }
-bool Enemy::isAlive() const { return mAlive; }
-void Enemy::kill() { mAlive = false; }
-int Enemy::getType() const { return mType; }

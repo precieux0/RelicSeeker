@@ -1,3 +1,5 @@
+#include <GLES3/gl3.h>
+
 #pragma once
 
 class MenuScreen {
