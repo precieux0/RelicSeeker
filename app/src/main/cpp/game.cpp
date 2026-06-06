@@ -137,8 +137,9 @@ void Game::run() {
     auto lastTime = std::chrono::steady_clock::now();
     while (mRunning) {
         if (!mWindowReady) {
-            handleEvents();
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // Attendre passivement les événements (10 ms)
+            ALooper_pollAll(10, nullptr, nullptr, nullptr);
+            handleEvents(); // traiter les événements
             continue;
         }
         auto now = std::chrono::steady_clock::now();
