@@ -1,11 +1,12 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <GLES3/gl3.h>
 
 struct CreditEntry {
     std::string role;
     std::string names;
-    float r, g, b; // couleur du texte
+    float r, g, b;
 };
 
 class CreditsScreen {
@@ -20,10 +21,10 @@ private:
     std::vector<CreditEntry> mEntries;
     float mScrollY;
     bool mFinished;
-    float mFadeAlpha;   // pour fondu à la fin
+    float mFadeAlpha;
     float mTimer;
-    GLuint mBackgroundTexture; // texture de fond dégradé
-    GLuint mVAO, mVBO;         // pour fond plein écran
+    GLuint mBackgroundTexture;
+    GLuint mVAO, mVBO;
     void createBackgroundTexture();
     void drawBackground();
 };

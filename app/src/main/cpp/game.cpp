@@ -14,7 +14,6 @@ static SplashScreen splash;
 static CreditsScreen credits;
 static bool initOnce = false;
 
-// Fonction statique pour le callback
 static void handleAppCmd(android_app* app, int32_t cmd) {
     Game* game = (Game*)app->userData;
     if (!game) return;
@@ -40,7 +39,7 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
     }
 }
 
-Game::Game(android_app* app) : mApp(app), mRunning(true), mState(STATE_SPLASH), mStateTimer(0) {
+Game::Game(android_app* app) : mRunning(true), mApp(app), mState(STATE_SPLASH), mStateTimer(0) {
     mApp->userData = this;
     mApp->onAppCmd = handleAppCmd;
 }
