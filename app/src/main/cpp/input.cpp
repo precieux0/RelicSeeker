@@ -29,25 +29,25 @@ float Input::getLookX() const { return mTouchX; }
 float Input::getLookY() const { return mTouchY; }
 
 int32_t Input::handleInput(android_app* app, AInputEvent* event) {
-    if (!app || !app->window) return 0;
+    // Récupérer l'instance courante (singleton)
+    Input& self = Input::get();
+    if (!self.mApp || !self.mApp->window) return 0;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        int width = ANativeWindow_getWidth(app->window);
-        int height = ANativeWindow_getHeight(app->window);
+        int width = ANativeWindow_getWidth(self.mApp->window);
+        int height = ANativeWindow_getHeight(self.mApp->window);
         if (width <= 0 || height <= 0) return 0;
         float x = AMotionEvent_getX(event, 0);
         float y = AMotionEvent_getY(event, 0);
         if (x < width / 2.0f) {
-            // Moitié gauche : déplacement
-            mForward = (y < height * 0.35f);
-            mBack    = (y > height * 0.65f);
-            mLeft    = (x < width / 4.0f);
-            mRight   = (x > width / 4.0f && x < width / 2.0f);
+            self.mForward = (y < height * 0.35f);
+            self.mBack    = (y > height * 0.65f);
+            self.mLeft    = (x < width / 4.0f);
+            self.mRight   = (x > width / 4.0f && x < width / 2.0f);
         } else {
-            // Moitié droite : saut et action
-            mJump    = (y < height * 0.5f);
-            mAction  = (y >= height * 0.5f);
-            mTouchX  = (x - width / 2.0f) / (width / 2.0f);
-            mTouchY  = y / (float)height;
+            self.mJump    = (y < height * 0.5f);
+            self.mAction  = (y >= height * 0.5f);
+            self.mTouchX  = (x - width / 2.0f) / (width / 2.0f);
+            self.mTouchY  = y / (float)height;
         }
         return 1;
     }
