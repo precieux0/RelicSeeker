@@ -12,27 +12,36 @@
 #include "level.h"
 #include <chrono>
 #include <cstdio>
-#include <android/asset_manager.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <cstdlib>
+#include <string>
+#include <android/native_activity.h>
 
 static Renderer renderer;
 static SplashScreen splash;
 static CreditsScreen credits;
 static MenuScreen menu;
 static bool sAssetsLoaded = false;
+static bool sSoundLoaded = false;
 static bool sInitFailed = false;
-static FILE* g_logFile = nullptr;
+static std::string sLogFilePath;
+static FILE* sLogFile = nullptr;
 
-static void logToFile(const char* fmt, ...) {
-    if (!g_logFile) return;
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(g_logFile, fmt, args);
-    fprintf(g_logFile, "\n");
-    fflush(g_logFile);
-    va_end(args);
+static void openLogFile(android_app* app) {
+    if (sLogFile || !app || !app->activity) return;
+    const char* dir = app->activity->internalDataPath;
+    if (!dir) return;
+    sLogFilePath = std::string(dir) + "/relic_seeker.log";
+    sLogFile = fopen(sLogFilePath.c_str(), "w");
+    if (sLogFile) {
+        fprintf(sLogFile, "[relic] log opened at %s\n", sLogFilePath.c_str());
+        fflush(sLogFile);
+    }
 }
+
+#define FLOG(...) do { \
+    LOGI(__VA_ARGS__); \
+    if (sLogFile) { fprintf(sLogFile, __VA_ARGS__); fprintf(sLogFile, "\n"); fflush(sLogFile); } \
+} while (0)
 
 static void handleAppCmd(android_app* app, int32_t cmd) {
     Game* game = (Game*)app->userData;
@@ -40,32 +49,30 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
 
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
-            logToFile("APP_CMD_INIT_WINDOW");
+            FLOG("APP_CMD_INIT_WINDOW");
             if (app->window != nullptr) {
-                logToFile("window not null, initializing renderer");
                 if (!renderer.init(app->window)) {
-                    logToFile("Renderer init failed");
+                    FLOG("Renderer init FAILED");
                     sInitFailed = true;
                     game->mRunning = false;
                     return;
                 }
-                logToFile("Renderer init OK");
+                FLOG("Renderer init OK");
                 if (!sAssetsLoaded) {
-                    logToFile("Loading assets");
                     if (!Font::get().init()) {
-                        logToFile("Font init failed");
+                        FLOG("Font init FAILED");
                         sInitFailed = true;
                         game->mRunning = false;
                         return;
                     }
+                    FLOG("Font init OK");
                     splash.init();
                     credits.init();
                     menu.init();
                     sAssetsLoaded = true;
-                    logToFile("Assets loaded");
+                    FLOG("Assets loaded");
                 }
-                static bool soundLoaded = false;
-                if (!soundLoaded) {
+                if (!sSoundLoaded) {
                     Sound& snd = Sound::get();
                     snd.init(app->activity->assetManager);
                     snd.loadSound("jump", "sounds/jump.wav");
@@ -73,18 +80,31 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
                     snd.loadSound("hit", "sounds/hit.wav");
                     snd.loadSound("credits_music", "sounds/credits_music.wav");
                     snd.loadSound("music_menu", "sounds/music_menu.wav");
+                    for (int i = 1; i <= TOTAL_LEVELS; i++) {
+                        char name[32], file[48];
+                        snprintf(name, sizeof(name), "music_level%d", i);
+                        snprintf(file, sizeof(file), "sounds/music_level%d.wav", i);
+                        snd.loadSound(name, file);
+                    }
                     Input::get().init(app);
-                    soundLoaded = true;
-                    logToFile("Sound loaded");
+                    sSoundLoaded = true;
+                    FLOG("Sound + input init done");
                 }
                 game->mWindowReady = true;
-                logToFile("Window ready set to true");
+                FLOG("Window READY");
             }
             break;
         case APP_CMD_TERM_WINDOW:
-            logToFile("APP_CMD_TERM_WINDOW");
+            FLOG("APP_CMD_TERM_WINDOW");
             game->mWindowReady = false;
             renderer.shutdown();
+            // Les assets devront être ré-uploadés vers le nouveau contexte GL
+            sAssetsLoaded = false;
+            break;
+        case APP_CMD_WINDOW_RESIZED:
+        case APP_CMD_CONFIG_CHANGED:
+            FLOG("Window resized / config changed");
+            if (app->window) renderer.onResize(app->window);
             break;
         case APP_CMD_GAINED_FOCUS:
             game->mHasFocus = true;
@@ -93,7 +113,7 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
             game->mHasFocus = false;
             break;
         case APP_CMD_DESTROY:
-            logToFile("APP_CMD_DESTROY");
+            FLOG("APP_CMD_DESTROY");
             game->mRunning = false;
             break;
         default:
@@ -104,23 +124,19 @@ static void handleAppCmd(android_app* app, int32_t cmd) {
 Game::Game(android_app* app)
     : mRunning(true), mWindowReady(false), mHasFocus(true),
       mApp(app), mState(STATE_SPLASH), mStateTimer(0) {
-    // Ouvrir le fichier de log sur la carte SD
-    char logPath[256];
-    snprintf(logPath, sizeof(logPath), "/sdcard/relic_seeker.log");
-    g_logFile = fopen(logPath, "w");
-    logToFile("Game created, log file: %s", logPath);
     mApp->userData = this;
     mApp->onAppCmd = handleAppCmd;
+    openLogFile(app);
+    FLOG("Game constructed");
 }
 
 void Game::changeState(GameState newState) {
-    logToFile("changeState from %d to %d", mState, newState);
+    FLOG("changeState %d -> %d", (int)mState, (int)newState);
     mState = newState;
     mStateTimer = 0;
     if (newState == STATE_MENU) {
         Input::get().setUiMode(true);
         menu.init();
-        menu.clearActions();
         Sound::get().switchMusic("music_menu", true);
     } else if (newState == STATE_PLAYING) {
         Input::get().setUiMode(false);
@@ -133,40 +149,44 @@ void Game::changeState(GameState newState) {
 }
 
 void Game::run() {
-    logToFile("Game::run started");
     auto lastTime = std::chrono::steady_clock::now();
     while (mRunning) {
+        handleEvents();
+        if (!mRunning || sInitFailed) break;
+
         if (!mWindowReady) {
-            // Attendre passivement les événements (10 ms)
-            ALooper_pollAll(10, nullptr, nullptr, nullptr);
-            handleEvents(); // traiter les événements
+            // Petite attente passive pour ne pas brûler le CPU.
+            ALooper_pollAll(16, nullptr, nullptr, nullptr);
             continue;
         }
+
         auto now = std::chrono::steady_clock::now();
         float dt = std::chrono::duration<float>(now - lastTime).count();
         if (dt > 0.1f) dt = 0.1f;
         lastTime = now;
 
+        // IMPORTANT : on NE gate PAS update sur mHasFocus, sinon le splash peut
+        // ne jamais finir si la focus event arrive trop tôt → écran noir éternel.
         update(dt);
         render();
     }
-    logToFile("Game::run finished");
-    if (g_logFile) fclose(g_logFile);
+    if (sLogFile) { fclose(sLogFile); sLogFile = nullptr; }
 }
 
 int Game::handleEvents() {
     android_poll_source* source = nullptr;
     int ident, count = 0;
+    // Poll non bloquant pour traiter tous les events en attente.
     while ((ident = ALooper_pollAll(0, nullptr, nullptr, (void**)&source)) >= 0) {
         if (source) { source->process(mApp, source); count++; }
+        if (mApp->destroyRequested) { mRunning = false; break; }
     }
-    if (mApp->destroyRequested) mRunning = false;
     if (mWindowReady) Input::get().update();
     return count;
 }
 
 void Game::update(float dt) {
-    if (!mHasFocus) return;
+    mStateTimer += dt;
     switch (mState) {
         case STATE_SPLASH:
             splash.update(dt);
@@ -179,8 +199,10 @@ void Game::update(float dt) {
             else if (menu.shouldQuit()) mRunning = false;
             break;
         case STATE_PLAYING:
-            World::get().update(dt);
-            Story::get().update(dt);
+            if (mHasFocus) {
+                World::get().update(dt);
+                Story::get().update(dt);
+            }
             if (World::get().isGameOver()) changeState(STATE_MENU);
             else if (World::get().hasWon()) changeState(STATE_CREDITS);
             break;

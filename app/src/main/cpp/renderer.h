@@ -11,6 +11,7 @@ class Renderer {
 public:
     Renderer();
     bool init(ANativeWindow* window);
+    void onResize(ANativeWindow* window);
     void shutdown();
     void beginFrame();
     void endFrame();

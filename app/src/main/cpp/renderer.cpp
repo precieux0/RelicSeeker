@@ -4,7 +4,7 @@
 
 Renderer::Renderer()
     : mDisplay(EGL_NO_DISPLAY), mSurface(EGL_NO_SURFACE), mContext(EGL_NO_CONTEXT),
-      mSkyColor(0.05f, 0.1f, 0.2f), mFogColor(0.08f, 0.1f, 0.15f), mLightDir(0.3f, 1, 0.2f),
+      mSkyColor(0.12f, 0.14f, 0.22f), mFogColor(0.10f, 0.12f, 0.18f), mLightDir(0.3f, 1, 0.2f),
       mFogDensity(0.02f), mWidth(0), mHeight(0), mInitialized(false) {}
 
 bool Renderer::init(ANativeWindow* window) {
@@ -88,17 +88,36 @@ void Renderer::setEnvironment(const vec3& skyColor, const vec3& fogColor, float 
     mLightDir = lightDir.normalized();
 }
 
+void Renderer::onResize(ANativeWindow* window) {
+    if (!mInitialized || !window) return;
+    eglQuerySurface(mDisplay, mSurface, EGL_WIDTH, &mWidth);
+    eglQuerySurface(mDisplay, mSurface, EGL_HEIGHT, &mHeight);
+    if (mWidth <= 0 || mHeight <= 0) {
+        mWidth = ANativeWindow_getWidth(window);
+        mHeight = ANativeWindow_getHeight(window);
+    }
+    if (mWidth > 0 && mHeight > 0) glViewport(0, 0, mWidth, mHeight);
+    LOGI("Renderer resized %dx%d", mWidth, mHeight);
+}
+
 void Renderer::beginFrame() {
     if (!mInitialized) return;
+    // Toujours réimposer le viewport — sécurité contre tout reset d'état.
+    if (mWidth > 0 && mHeight > 0) glViewport(0, 0, mWidth, mHeight);
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDepthMask(GL_TRUE);
     glClearColor(mSkyColor.x, mSkyColor.y, mSkyColor.z, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mView = mCurrentCam.getViewMatrix();
-    mProj = mCurrentCam.getProjectionMatrix((float)mWidth / (float)mHeight);
+    mProj = mCurrentCam.getProjectionMatrix(mHeight > 0 ? (float)mWidth / (float)mHeight : 1.0f);
 }
 
 void Renderer::endFrame() {
     if (!mInitialized) return;
-    eglSwapBuffers(mDisplay, mSurface);
+    if (!eglSwapBuffers(mDisplay, mSurface)) {
+        LOGE("eglSwapBuffers failed: 0x%x", eglGetError());
+    }
 }
 
 void Renderer::setCamera(const Camera& cam) { mCurrentCam = cam; }
