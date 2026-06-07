@@ -1,10 +1,8 @@
 #include "menu.h"
-#include "font.h"
 #include "input.h"
 #include "utils.h"
 #include <GLES3/gl3.h>
 #include <cmath>
-#include <string>
 
 MenuScreen::MenuScreen()
     : mSelected(0), mAnimTime(0), mInputCooldown(0),
@@ -20,38 +18,19 @@ void MenuScreen::init() {
 
 void MenuScreen::ensureBackground() {
     if (mBgVAO) return;
-    float verts[] = { -1,-1,0,0, 1,-1,1,0, 1,1,1,1, -1,1,0,1 };
+    float verts[] = { -1,-1, 1,-1, 1,1, -1,1 };
     glGenVertexArrays(1, &mBgVAO);
     glGenBuffers(1, &mBgVBO);
     glBindVertexArray(mBgVAO);
     glBindBuffer(GL_ARRAY_BUFFER, mBgVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 
-    const char* vs =
-        "#version 300 es\n"
-        "layout(location=0) in vec2 aPos;\n"
-        "layout(location=1) in vec2 aTexCoord;\n"
-        "out vec2 vUV;\n"
-        "void main(){ gl_Position=vec4(aPos,0,1); vUV=aTexCoord; }";
-    const char* fs =
-        "#version 300 es\n"
-        "precision mediump float;\n"
-        "in vec2 vUV;\n"
-        "uniform float uTime;\n"
-        "out vec4 fragColor;\n"
-        "void main(){\n"
-        "  vec3 top=vec3(0.05,0.08,0.14);\n"
-        "  vec3 bot=vec3(0.18,0.12,0.06);\n"
-        "  vec3 col=mix(bot,top,vUV.y);\n"
-        "  float glow=0.15*sin(uTime*0.5+vUV.x*6.0)*sin(uTime*0.3+vUV.y*4.0);\n"
-        "  col+=vec3(0.6,0.45,0.1)*glow;\n"
-        "  fragColor=vec4(col,1.0);\n"
-        "}";
+    // Shader très simple : couleur uniforme (bleu foncé)
+    const char* vs = "#version 300 es\nlayout(location=0) in vec2 aPos;\nvoid main(){ gl_Position=vec4(aPos,0,1); }";
+    const char* fs = "#version 300 es\nout vec4 fragColor;\nvoid main(){ fragColor=vec4(0.1,0.05,0.2,1.0); }";
     GLuint v = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(v, 1, &vs, nullptr);
     glCompileShader(v);
@@ -91,28 +70,29 @@ void MenuScreen::render() {
     ensureBackground();
     glDisable(GL_DEPTH_TEST);
     glUseProgram(mBgProg);
-    glUniform1f(glGetUniformLocation(mBgProg, "uTime"), mAnimTime);
     glBindVertexArray(mBgVAO);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-    float pulse = 0.5f + 0.5f * sinf(mAnimTime * 2.0f);
-    Font::get().drawText("RELIC SEEKER", -0.55f, 0.55f, 0.09f, 1.0f, 0.85f, 0.25f, 1.0f);
-    Font::get().drawText("ECHOES OF ETERNITY", -0.72f, 0.42f, 0.045f, 0.85f, 0.80f, 0.65f, 1.0f);
-
-    const char* items[] = { "> NOUVELLE QUETE", "> CREDITS", "> QUITTER" };
+    // Dessiner trois rectangles colorés pour simuler les options
+    // (sans utiliser la police)
+    float w = 0.4f, h = 0.1f;
+    float startY = 0.2f;
+    float step = 0.15f;
     for (int i = 0; i < 3; ++i) {
-        float y = 0.05f - i * 0.14f;
-        bool sel = (i == mSelected);
-        float r = sel ? 1.0f : 0.65f;
-        float g = sel ? 0.85f : 0.60f;
-        float b = sel ? 0.2f + 0.2f * pulse : 0.15f;
-        float scale = sel ? 0.055f : 0.048f;
-        std::string label = items[i];
-        if (sel) label = std::string(">> ") + (items[i] + 2);
-        Font::get().drawText(label, -0.55f, y, scale, r, g, b, 1.0f);
+        float y = startY - i * step;
+        float r = (i == mSelected) ? 0.2f : 0.6f;
+        float g = (i == mSelected) ? 0.6f : 0.3f;
+        float b = (i == mSelected) ? 0.2f : 0.1f;
+        // Quad pour l'option
+        float rect[] = { -w, y,  w, y,  w, y+h, -w, y+h };
+        static GLuint rectVBO = 0;
+        if (!rectVBO) glGenBuffers(1, &rectVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(rect), rect, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     }
-
-    Font::get().drawText("Gauche: naviguer  |  Droite: valider", -0.78f, -0.82f, 0.032f, 0.5f, 0.5f, 0.5f, 0.9f);
     glEnable(GL_DEPTH_TEST);
 }
 
