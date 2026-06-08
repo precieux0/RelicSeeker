@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #endif
+#include "utils.h"
 #include "camera.h"
 
 class Renderer {
