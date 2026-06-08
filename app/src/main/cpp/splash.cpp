@@ -50,8 +50,13 @@ void SplashScreen::render() {
     glDisable(GL_DEPTH_TEST);
     static GLuint prog=0;
     if (!prog) {
+#ifdef DESKTOP_BUILD
+        const char* vs = "#version 330 core\nlayout(location=0) in vec2 aPos;layout(location=1) in vec2 aTexCoord;out vec2 vTexCoord;void main(){gl_Position=vec4(aPos,0,1);vTexCoord=aTexCoord;}";
+        const char* fs = "#version 330 core\nout vec4 fragColor;in vec2 vTexCoord;uniform sampler2D uTex;void main(){fragColor=texture(uTex,vTexCoord);}";
+#else
         const char* vs = "#version 300 es\nlayout(location=0) in vec2 aPos;layout(location=1) in vec2 aTexCoord;out vec2 vTexCoord;void main(){gl_Position=vec4(aPos,0,1);vTexCoord=aTexCoord;}";
         const char* fs = "#version 300 es\nprecision mediump float;in vec2 vTexCoord;uniform sampler2D uTex;out vec4 fragColor;void main(){fragColor=texture(uTex,vTexCoord);}";
+#endif
         GLuint vsId = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vsId, 1, &vs, nullptr);
         glCompileShader(vsId);

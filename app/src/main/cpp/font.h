@@ -1,5 +1,9 @@
 #pragma once
+#ifdef DESKTOP_BUILD
+#include <GL/glew.h>
+#else
 #include <GLES3/gl3.h>
+#endif
 #include <string>
 
 class Font {

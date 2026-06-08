@@ -126,6 +126,17 @@ void Font::setupBuffers() {
 bool Font::init() {
     // Compilation du shader de texte
     const char* vsSource =
+#ifdef DESKTOP_BUILD
+        "#version 330 core\n"
+        "layout(location=0) in vec2 aPos;\n"
+        "layout(location=1) in vec2 aTexCoord;\n"
+        "out vec2 vTexCoord;\n"
+        "uniform mat4 uMVP;\n"
+        "void main() {\n"
+        "    gl_Position = uMVP * vec4(aPos, 0.0, 1.0);\n"
+        "    vTexCoord = aTexCoord;\n"
+        "}\n";
+#else
         "#version 300 es\n"
         "layout(location=0) in vec2 aPos;\n"
         "layout(location=1) in vec2 aTexCoord;\n"
@@ -135,9 +146,30 @@ bool Font::init() {
         "    gl_Position = uMVP * vec4(aPos, 0.0, 1.0);\n"
         "    vTexCoord = aTexCoord;\n"
         "}\n";
+#endif
     const char* fsSource =
+#ifdef DESKTOP_BUILD
+        "#version 330 core\n"
+        "in vec2 vTexCoord;\n"
+        "uniform sampler2D uTex;\n"
+        "uniform vec4 uColor;\n"
+        "out vec4 fragColor;\n"
+        "void main() {\n"
+        "    float alpha = texture(uTex, vTexCoord).r;\n"
+        "    fragColor = vec4(uColor.rgb, uColor.a * alpha);\n"
+        "}\n";
+#else
         "#version 300 es\n"
         "precision mediump float;\n"
+        "in vec2 vTexCoord;\n"
+        "uniform sampler2D uTex;\n"
+        "uniform vec4 uColor;\n"
+        "out vec4 fragColor;\n"
+        "void main() {\n"
+        "    float alpha = texture(uTex, vTexCoord).r;\n"
+        "    fragColor = vec4(uColor.rgb, uColor.a * alpha);\n"
+        "}\n";
+#endif
         "in vec2 vTexCoord;\n"
         "uniform sampler2D uTex;\n"
         "uniform vec4 uColor;\n"
@@ -191,13 +223,22 @@ bool Font::init() {
     setupBuffers();
 
     const char* rvs =
+#ifdef DESKTOP_BUILD
+        "#version 330 core\n"
+        "layout(location=0) in vec2 aPos;\n"
+#else
         "#version 300 es\n"
         "layout(location=0) in vec2 aPos;\n"
+#endif
         "uniform mat4 uMVP;\n"
         "void main(){ gl_Position=uMVP*vec4(aPos,0,1); }";
     const char* rfs =
+#ifdef DESKTOP_BUILD
+        "#version 330 core\n"
+#else
         "#version 300 es\n"
         "precision mediump float;\n"
+#endif
         "uniform vec4 uColor;\n"
         "out vec4 fragColor;\n"
         "void main(){ fragColor=uColor; }";

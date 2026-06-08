@@ -29,14 +29,9 @@ static FILE* sLogFile = nullptr;
 static void openLogFile(android_app* app) {
     if (sLogFile || !app || !app->activity) return;
     const char* dir = app->activity->internalDataPath;
-    if (dir) {
-        sLogFilePath = std::string(dir) + "/relic_seeker.log";
-        sLogFile = fopen(sLogFilePath.c_str(), "w");
-    }
-    if (!sLogFile) {
-        sLogFilePath = "/sdcard/relic_seeker.log";
-        sLogFile = fopen(sLogFilePath.c_str(), "w");
-    }
+    if (!dir) return;
+    sLogFilePath = std::string(dir) + "/relic_seeker.log";
+    sLogFile = fopen(sLogFilePath.c_str(), "w");
     if (sLogFile) {
         fprintf(sLogFile, "[relic] log opened at %s\n", sLogFilePath.c_str());
         fflush(sLogFile);
@@ -222,16 +217,6 @@ void Game::update(float dt) {
 
 void Game::render() {
     if (!mWindowReady) return;
-    FLOG("Game::render state=%d windowReady=%d rendererInitialized=%d", (int)mState, (int)mWindowReady, renderer.isInitialized());
-    if (!renderer.isInitialized()) {
-        FLOG("Renderer not initialized before render, attempting recovery");
-        if (mApp && mApp->window && renderer.init(mApp->window)) {
-            FLOG("Renderer recovery init OK");
-        } else {
-            FLOG("Renderer recovery init FAILED");
-            return;
-        }
-    }
     renderer.beginFrame();
     switch (mState) {
         case STATE_SPLASH:
