@@ -102,6 +102,15 @@ void Renderer::onResize(ANativeWindow* window) {
 
 void Renderer::beginFrame() {
     if (!mInitialized) return;
+    if (eglGetCurrentContext() != mContext) {
+        if (!eglMakeCurrent(mDisplay, mSurface, mSurface, mContext)) {
+            LOGE("eglMakeCurrent failed in beginFrame: 0x%x", eglGetError());
+            mInitialized = false;
+            return;
+        } else {
+            LOGI("eglMakeCurrent recovered context in beginFrame");
+        }
+    }
     // Toujours réimposer le viewport — sécurité contre tout reset d'état.
     if (mWidth > 0 && mHeight > 0) glViewport(0, 0, mWidth, mHeight);
     glDisable(GL_SCISSOR_TEST);
@@ -117,6 +126,7 @@ void Renderer::endFrame() {
     if (!mInitialized) return;
     if (!eglSwapBuffers(mDisplay, mSurface)) {
         LOGE("eglSwapBuffers failed: 0x%x", eglGetError());
+        mInitialized = false;
     }
 }
 

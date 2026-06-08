@@ -19,6 +19,7 @@ public:
     void setEnvironment(const vec3& skyColor, const vec3& fogColor, float fogDensity, const vec3& lightDir);
     void drawMesh(Mesh* mesh, const mat4& model, const vec3& color, float emissive = 0.0f);
     void drawSky();
+    bool isInitialized() const { return mInitialized; }
     int getWidth() const { return mWidth; }
     int getHeight() const { return mHeight; }
 private:
