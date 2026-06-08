@@ -2,7 +2,9 @@
 #include "font.h"
 #include "sound.h"
 #include "utils.h"
+#ifndef DESKTOP_BUILD
 #include <GLES3/gl3.h>
+#endif
 
 CreditsScreen::CreditsScreen() : mScrollY(1.2f), mFinished(false), mFadeAlpha(0), mTimer(0),
                                  mBackgroundTexture(0), mVAO(0), mVBO(0) {}

@@ -2,7 +2,9 @@
 #include "font.h"
 #include "input.h"
 #include "utils.h"
+#ifndef DESKTOP_BUILD
 #include <GLES3/gl3.h>
+#endif
 #include <string>
 
 static const char* kOptions[] = { "JOUER", "CREDITS", "QUITTER" };
