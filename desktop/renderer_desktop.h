@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #endif
 #include "utils.h"
+#include "../app/src/main/cpp/camera.h"
 
 class Renderer {
 public:
