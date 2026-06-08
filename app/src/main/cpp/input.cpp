@@ -1,6 +1,10 @@
 #include "input.h"
 #include "utils.h"
+#ifndef DESKTOP_BUILD
 #include <android/native_window.h>
+#else
+#include <GLFW/glfw3.h>
+#endif
 
 Input& Input::get() {
     static Input instance;
@@ -8,21 +12,48 @@ Input& Input::get() {
 }
 
 Input::Input()
+#ifdef DESKTOP_BUILD
+    : mWindow(nullptr), mLeft(false), mRight(false), mForward(false),
+      mBack(false), mJump(false), mAction(false),
+      mPause(false), mMenuUp(false), mMenuDown(false), mMenuConfirm(false),
+      mUiMenuMode(false), mTouchX(0), mTouchY(0) {}
+#else
     : mApp(nullptr), mLeft(false), mRight(false), mForward(false),
       mBack(false), mJump(false), mAction(false),
       mPause(false), mMenuUp(false), mMenuDown(false), mMenuConfirm(false),
       mUiMenuMode(false), mTouchX(0), mTouchY(0) {}
+#endif
 
+#ifdef DESKTOP_BUILD
+void Input::init(GLFWwindow* window) {
+    mWindow = window;
+}
+#endif
+
+#ifndef DESKTOP_BUILD
 void Input::init(android_app* app) {
     mApp = app;
     app->onInputEvent = [](android_app* app, AInputEvent* event) -> int32_t {
         return Input::get().handleInput(app, event);
     };
 }
+#endif
 
 void Input::setUiMode(bool menuMode) { mUiMenuMode = menuMode; }
 void Input::update() {
+#ifdef DESKTOP_BUILD
+    if (mWindow) {
+        mPause = glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS;
+        mMenuUp = glfwGetKey(mWindow, GLFW_KEY_UP) == GLFW_PRESS;
+        mMenuDown = glfwGetKey(mWindow, GLFW_KEY_DOWN) == GLFW_PRESS;
+        mMenuConfirm = glfwGetKey(mWindow, GLFW_KEY_ENTER) == GLFW_PRESS ||
+                       glfwGetKey(mWindow, GLFW_KEY_SPACE) == GLFW_PRESS;
+    } else {
+        mPause = mMenuUp = mMenuDown = mMenuConfirm = false;
+    }
+#else
     mPause = mMenuUp = mMenuDown = mMenuConfirm = false;
+#endif
 }
 
 void Input::clearMovement() {
@@ -43,6 +74,7 @@ bool Input::isMenuConfirm() const { return mMenuConfirm; }
 float Input::getLookX() const { return mTouchX; }
 float Input::getLookY() const { return mTouchY; }
 
+#ifndef DESKTOP_BUILD
 int32_t Input::handleInput(android_app* app, AInputEvent* event) {
     Input& self = Input::get();
     if (!self.mApp || !self.mApp->window) return 0;
@@ -95,3 +127,4 @@ int32_t Input::handleInput(android_app* app, AInputEvent* event) {
     }
     return 1;
 }
+#endif

@@ -1,6 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "renderer_desktop.h"
+#include "input.h"
 #include "font.h"
 #include "splash.h"
 #include "menu.h"
@@ -47,6 +48,9 @@ int main() {
         return -1;
     }
 
+    Input& input = Input::get();
+    input.init(window);
+
     SplashScreen splash;
     MenuScreen menu;
     if (!splash.init()) {
@@ -70,6 +74,13 @@ int main() {
         }
 
         glfwPollEvents();
+        input.setUiMode(showMenu);
+        input.update();
+        if (showMenu) {
+            menu.update(dt);
+            if (menu.shouldQuit()) break;
+        }
+
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         if (width > 0 && height > 0) renderer.onResize(window);
