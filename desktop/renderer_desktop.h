@@ -4,8 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #endif
-#include "utils.h"
-#include "../app/src/main/cpp/camera.h"
+#include "camera.h"
 
 class Renderer {
 public:

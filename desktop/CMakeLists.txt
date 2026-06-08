@@ -17,6 +17,7 @@ include_directories(
 add_executable(RelicSeekerDesktop
     main.cpp
     renderer_desktop.cpp
+    ../app/src/main/cpp/camera.cpp
     ../app/src/main/cpp/font.cpp
     ../app/src/main/cpp/splash.cpp
     ../app/src/main/cpp/menu.cpp

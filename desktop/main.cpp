@@ -1,9 +1,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "renderer_desktop.h"
-#include "../app/src/main/cpp/font.h"
-#include "../app/src/main/cpp/splash.h"
-#include "../app/src/main/cpp/menu.h"
+#include "font.h"
+#include "splash.h"
+#include "menu.h"
 #include <chrono>
 #include <iostream>
 
