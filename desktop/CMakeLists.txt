@@ -21,6 +21,7 @@ add_executable(RelicSeekerDesktop
     ../app/src/main/cpp/font.cpp
     ../app/src/main/cpp/splash.cpp
     ../app/src/main/cpp/menu.cpp
+    ../app/src/main/cpp/input.cpp
     ../app/src/main/cpp/utils.cpp
 )
 
